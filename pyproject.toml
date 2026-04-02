@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ordra"
+version = "0.1.0"
+description = "Ordra — the world's smartest file organizer"
+requires-python = ">=3.10"
+dependencies = [
+    "typer[all]>=0.12",
+    "rich>=13",
+    "anthropic>=0.40",
+    "send2trash>=1.8",
+]
+
+[project.scripts]
+ordra = "file_organizer.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["file_organizer*"]
