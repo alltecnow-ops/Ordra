@@ -7,6 +7,8 @@ Ordra is a Python CLI tool that scans any folder or drive, surfaces what's wasti
 > 🧹 Recovered **6 GB** from a Downloads folder in one command. Health score: **77 → 99/100.**  
 > 📦 Successfully indexed **360,755 files · 503 GB** on a full D: drive scan.
 
+![Ordra launcher menu](launcher.png)
+*The Ordra desktop launcher — no terminal knowledge required.*
 ---
 
 ## Features
