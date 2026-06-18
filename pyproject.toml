@@ -17,6 +17,22 @@ dependencies = [
 [project.scripts]
 ordra = "file_organizer.cli:app"
 
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-cov"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["file_organizer"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["file_organizer*"]
