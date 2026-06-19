@@ -9,7 +9,7 @@ SCAN_SKIP_DIRS: set[str] = {
     # Windows OS — touching these breaks the system
     "windows", "program files", "program files (x86)", "programdata",
     "$recycle.bin", "system volume information", "recovery", "boot",
-    "perflogs", "msocache", "winsxs", "servicing",
+    "perflogs", "msocache", "winsxs", "servicing", "efi", "winre",
     # User app data — configs/caches that belong to installed apps
     "appdata",
     # Development internals — huge and must never be reorganized
@@ -23,18 +23,32 @@ SCAN_SKIP_DIRS: set[str] = {
     "android", "lost.dir", ".android_secure", ".trash-1000",
     # macOS system
     "private", "cores", ".spotlight-v100", ".fseventsd", ".trashes",
+    "library", "system", "volumes",
     # Linux system
     "proc", "sys", "dev", "run",
+    "etc", "bin", "sbin", "lib", "lib64", "usr", "var", "tmp", "opt", "root",
+    # Credential and secret directories — never index or reorganize
+    ".ssh", ".aws", ".kube", ".docker", ".gnupg",
 }
 
 # ── Layer 2: path segments that make a file untouchable ────────────────────
 # Checked against the FULL lowercase path before any move or delete.
 # This is a backstop — if a file somehow got indexed, it still won't be touched.
 PROTECTED_PATH_SEGMENTS: set[str] = {
+    # Windows
     "windows", "program files", "program files (x86)", "programdata",
     "system volume information", "$recycle.bin", "appdata",
+    "winsxs", "servicing", "perflogs", "recovery", "efi", "winre",
+    # Development / version control
     "node_modules", "__pycache__", ".git", ".svn", ".hg",
     "site-packages",
+    # macOS
+    "library", "system", "volumes", "private",
+    # Linux
+    "etc", "bin", "sbin", "lib", "lib64", "usr", "var",
+    "proc", "sys", "dev", "run", "boot", "opt",
+    # Credential and secret directories
+    ".ssh", ".aws", ".kube", ".docker", ".gnupg",
 }
 
 HASH_WORKERS = min(8, os.cpu_count() or 4)

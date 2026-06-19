@@ -48,6 +48,23 @@ def _active_folder(db, name: str | None = None) -> tuple[int | None, list[str]]:
         return row["id"], [row["path"]]
 
 
+def _is_root_drive(path: Path) -> bool:
+    """Return True if *path* is the root of a drive or filesystem.
+
+    On Windows this catches C:\\ and D:\\; on Linux/macOS it catches /.
+    Scanning a root drive is almost always unintentional and risks
+    touching system directories if any safety guard is ever misconfigured.
+    """
+    resolved = path.resolve()
+    # POSIX root
+    if str(resolved) == "/":
+        return True
+    # Windows drive root: C:\\ has no parent other than itself
+    if resolved == resolved.parent and resolved.drive:
+        return True
+    return False
+
+
 app = typer.Typer(
     name="ordra",
     help="[bold cyan]Ordra[/bold cyan] — the world's smartest file organizer.",
@@ -62,11 +79,25 @@ def scan(
     folder: Path = typer.Argument(..., help="Folder to scan and index"),
     no_hash: bool = typer.Option(False, "--no-hash", help="Skip duplicate detection (faster)"),
     force_rehash: bool = typer.Option(False, "--force-rehash", help="Re-hash all files from scratch"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation for risky scans (e.g. drive root)"),
 ):
     """Scan a folder and index all files into the database."""
     if not folder.exists() or not folder.is_dir():
         console.print(f"[red]Error:[/red] '{folder}' is not a valid directory.")
         raise typer.Exit(1)
+
+    if _is_root_drive(folder):
+        console.print()
+        console.print(
+            "[bold yellow]  Warning:[/bold yellow] You are about to scan an entire drive root.\n"
+            "  System directories will be skipped, but this scan may take a very long\n"
+            "  time and index many files you don't intend to organize.\n"
+            "  Consider scanning a specific folder (e.g. ~/Downloads) instead."
+        )
+        console.print()
+        if not yes and not typer.confirm("  Scan the full drive root anyway?", default=False):
+            console.print("\n[dim]Cancelled — nothing was scanned.[/dim]\n")
+            raise typer.Exit()
 
     db = get_db()
 
