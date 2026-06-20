@@ -3,13 +3,14 @@ from pathlib import Path
 
 from rich.align import Align
 from rich.columns import Columns
-from rich.console import Console
+from rich.console import Console, Group
 from rich.live import Live
 from rich.panel import Panel
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
+from rich.tree import Tree
 from rich import box
 
 from file_organizer.services.duplicates import DuplicateGroup, SpaceSummary
@@ -64,20 +65,23 @@ def _bar(filled: int, total: int = 20, color: str = "cyan") -> Text:
 
 def _ordra_header(console: Console, subtitle: str = "", folders: list[str] | None = None) -> None:
     console.print()
-    title = Text("[*] ORDRA", style="bold cyan")
+    lines: list = []
+
+    title = Text(justify="center")
+    title.append("◈  ORDRA", style="bold cyan")
     if subtitle:
-        title.append(f"  |  {subtitle}", style="dim white")
-    console.print(Align.center(title))
-    console.print(Align.center(Rule(style="dim cyan")))
+        title.append(f"  ·  {subtitle}", style="dim white")
+    lines.append(Align.center(title))
 
     if folders:
         home = str(Path.home())
         short = [f.replace(home, "~") for f in folders]
         folder_text = Text(justify="center")
-        folder_text.append("Folder: " if len(short) == 1 else "Folders: ", style="dim")
-        folder_text.append("  |  ".join(short), style="bold white")
-        console.print(Align.center(folder_text))
+        folder_text.append("Folder  " if len(short) == 1 else "Folders  ", style="dim")
+        folder_text.append("  ·  ".join(short), style="bold white")
+        lines.append(Align.center(folder_text))
 
+    console.print(Panel(Group(*lines), border_style="cyan", box=box.ROUNDED, padding=(0, 4)))
     console.print()
 
 
@@ -96,6 +100,13 @@ def render_scan_result(result: ScanResult, console: Console, folders: list[str] 
     ], equal=True, expand=True)
 
     console.print(Panel(cols, border_style="cyan", padding=(1, 2)))
+    console.print()
+
+    hint = Text(justify="center")
+    hint.append("→ Run  ", style="dim")
+    hint.append("ordra stats", style="bold cyan")
+    hint.append("  to see your health score", style="dim")
+    console.print(Align.center(hint))
     console.print()
 
 
@@ -136,35 +147,46 @@ def render_stats(summary: SpaceSummary, console: Console, folders: list[str] | N
     breakdown = Table.grid(padding=(0, 2))
     breakdown.add_column(justify="right", style="dim", width=14)
     breakdown.add_column(width=22)
+    breakdown.add_column(justify="right", width=5)
     breakdown.add_column(justify="right", width=10)
 
     if summary.duplicate_wasted_bytes > 0:
         pct = summary.duplicate_wasted_bytes / max(summary.total_size_bytes, 1)
         filled = int(pct * 20)
-        breakdown.add_row("Duplicates", _bar(filled, color="red"), f"[red]{fmt_bytes(summary.duplicate_wasted_bytes)}[/red]")
+        breakdown.add_row("Duplicates", _bar(filled, color="red"),
+                          f"[dim]{pct*100:.0f}%[/dim]",
+                          f"[red]{fmt_bytes(summary.duplicate_wasted_bytes)}[/red]")
 
     if summary.junk_bytes > 0:
         pct = summary.junk_bytes / max(summary.total_size_bytes, 1)
         filled = max(1, int(pct * 20))
-        breakdown.add_row("Junk files", _bar(filled, color="yellow"), f"[yellow]{fmt_bytes(summary.junk_bytes)}[/yellow]")
+        breakdown.add_row("Junk files", _bar(filled, color="yellow"),
+                          f"[dim]{pct*100:.0f}%[/dim]",
+                          f"[yellow]{fmt_bytes(summary.junk_bytes)}[/yellow]")
 
     if summary.total_size_bytes > 0:
         clean = summary.total_size_bytes - summary.reclaimable_bytes
         pct = clean / summary.total_size_bytes
         filled = int(pct * 20)
-        breakdown.add_row("Clean files", _bar(filled, color="green"), f"[green]{fmt_bytes(clean)}[/green]")
+        breakdown.add_row("Clean files", _bar(filled, color="green"),
+                          f"[dim]{pct*100:.0f}%[/dim]",
+                          f"[green]{fmt_bytes(clean)}[/green]")
 
-    console.print(Panel(breakdown, title="[dim]Breakdown[/dim]", border_style="dim", padding=(1, 2)))
+    console.print(Panel(breakdown, title="[dim]Breakdown[/dim]", border_style="dim", box=box.ROUNDED, padding=(1, 2)))
     console.print()
 
-    # Health score
-    score_bar = _bar(score // 5, color=sc)
-    score_text = Text()
-    score_text.append("Folder Health  ", style="dim")
-    score_text.append(str(score), style=f"bold {sc}")
-    score_text.append("/100  ", style="dim")
-    score_text.append(sl, style=f"bold {sc}")
-    console.print(Align.center(score_text))
+    # Health score — hero panel
+    score_line = Text(justify="center")
+    score_line.append(str(score), style=f"bold {sc}")
+    score_line.append("  /  100  ·  ", style="dim")
+    score_line.append(sl, style=f"bold {sc}")
+    console.print(Panel(
+        Group(Align.center(score_line), Align.center(_bar(score // 5, color=sc))),
+        title="[dim]Health Score[/dim]",
+        border_style=sc,
+        box=box.ROUNDED,
+        padding=(1, 4),
+    ))
     console.print()
 
     # Next action hint
@@ -201,23 +223,23 @@ def render_duplicates(groups: list[DuplicateGroup], console: Console, folders: l
     console.print()
 
     for i, g in enumerate(groups, 1):
-        waste_text = Text()
-        waste_text.append(f"  #{i}  ", style="dim")
-        waste_text.append(fmt_bytes(g.wasted_bytes), style="bold red")
-        waste_text.append(f"  wasted  ·  {g.file_count} copies  ·  ", style="dim")
-        waste_text.append(g.sha256, style="dim cyan")
-        console.print(waste_text)
+        root_label = Text()
+        root_label.append(f"#{i}  ", style="dim")
+        root_label.append(fmt_bytes(g.wasted_bytes), style="bold red")
+        root_label.append(f"  wasted  ·  {g.file_count} copies  ·  sha ", style="dim")
+        root_label.append(g.sha256, style="dim cyan")
 
+        tree = Tree(root_label, guide_style="dim cyan")
         for j, member in enumerate(g.members):
-            prefix = "  \\-" if j == len(g.members) - 1 else "  +-"
-            line = Text()
-            line.append(prefix, style="dim")
-            name = member.name
-            parent = str(member.parent).replace(str(Path.home()), "~")
-            line.append(name, style="bold white")
-            line.append(f"  {parent}", style="dim")
-            line.append(f"  {fmt_bytes(g.size_bytes)}", style="cyan")
-            console.print(line)
+            node = Text()
+            node.append(member.name, style="bold white")
+            node.append(f"  {str(member.parent).replace(str(Path.home()), '~')}", style="dim")
+            node.append(f"  {fmt_bytes(g.size_bytes)}", style="cyan")
+            if j == 0:
+                node.append("  ← keep", style="dim green")
+            tree.add(node)
+
+        console.print(tree)
         console.print()
 
     # Action hint
@@ -270,12 +292,11 @@ def render_suggestions(suggestions: list[Suggestion], console: Console, ai_strea
         color, label, desc = CATEGORY_CONFIG.get(cat, ("white", cat.upper(), ""))
         cat_savings = sum(s.potential_bytes for s in items)
 
-        header = Text()
-        header.append(f"  {label}", style=f"bold {color}")
-        header.append(f"  ·  {len(items)} files", style="dim")
+        rule_title = f"[bold {color}]{label}[/bold {color}]  [dim]{len(items)} files"
         if cat_savings > 0:
-            header.append(f"  ·  {fmt_bytes(cat_savings)}", style=f"bold {color}")
-        console.print(header)
+            rule_title += f"  ·  {fmt_bytes(cat_savings)}"
+        rule_title += "[/dim]"
+        console.print(Rule(rule_title, style=f"dim {color}"))
         console.print(Text(f"  {desc}", style="dim"))
 
         t = Table.grid(padding=(0, 2))
@@ -283,7 +304,7 @@ def render_suggestions(suggestions: list[Suggestion], console: Console, ai_strea
         t.add_column(max_width=50, overflow="ellipsis")
         t.add_column(justify="right", width=10)
 
-        for s in items[:8]:
+        for s in items[:10]:
             name = Path(s.path).name if s.path else "-"
             size_str = fmt_bytes(s.potential_bytes) if s.potential_bytes else ""
             t.add_row(
@@ -292,8 +313,8 @@ def render_suggestions(suggestions: list[Suggestion], console: Console, ai_strea
                 Text(size_str, style=f"dim {color}"),
             )
 
-        if len(items) > 8:
-            t.add_row("", Text(f"... and {len(items)-8} more", style="dim"), "")
+        if len(items) > 10:
+            t.add_row("", Text(f"... and {len(items)-10} more", style="dim"), "")
 
         console.print(t)
         console.print()

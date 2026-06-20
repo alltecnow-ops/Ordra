@@ -306,7 +306,7 @@ def clean(
 
     # Preview table
     console.print()
-    console.print(Rule("[bold cyan][*] ORDRA  |  Clean Preview[/bold cyan]", style="dim cyan"))
+    console.print(Rule("[bold cyan]◈  ORDRA  ·  Clean Preview[/bold cyan]", style="dim cyan"))
     console.print()
 
     dupe_list   = [i for i in items if "Duplicate" in i.reason]
