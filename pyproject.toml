@@ -21,9 +21,11 @@ Repository = "https://github.com/alltecnow-ops/ordra"
 
 [project.scripts]
 ordra = "file_organizer.cli:app"
+ordra-tui = "file_organizer.tui.app:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-cov"]
+tui = ["textual>=0.60,<1.0"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
