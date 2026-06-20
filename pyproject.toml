@@ -4,15 +4,20 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ordra"
-version = "0.1.0"
+version = "1.0.0"
 description = "Ordra — the world's smartest file organizer"
 requires-python = ">=3.10"
 dependencies = [
-    "typer[all]>=0.12",
-    "rich>=13",
-    "anthropic>=0.40",
-    "send2trash>=1.8",
+    "typer[all]>=0.12,<1.0",
+    "rich>=13,<15",
+    "anthropic>=0.40,<2.0",
+    "send2trash>=1.8,<2.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/alltecnow-ops/ordra"
+Repository = "https://github.com/alltecnow-ops/ordra"
+"Bug Tracker" = "https://github.com/alltecnow-ops/ordra/issues"
 
 [project.scripts]
 ordra = "file_organizer.cli:app"

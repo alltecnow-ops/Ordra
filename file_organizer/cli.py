@@ -32,9 +32,10 @@ def _active_folder(db, name: str | None = None) -> tuple[int | None, list[str]]:
     - Returns (None, []) when no folders have been scanned yet.
     """
     if name:
+        escaped = name.lower().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         row = db.execute(
-            "SELECT id, path FROM watched_folders WHERE LOWER(path) LIKE ? ORDER BY last_scan DESC LIMIT 1",
-            (f"%{name.lower()}%",),
+            "SELECT id, path FROM watched_folders WHERE LOWER(path) LIKE ? ESCAPE '\\' ORDER BY last_scan DESC LIMIT 1",
+            (f"%{escaped}%",),
         ).fetchone()
         if not row:
             return None, []
@@ -393,6 +394,59 @@ def chat(
         console.print(chunk, end="")
 
     console.print()
+    console.print()
+
+
+@app.command()
+def version():
+    """Show the installed Ordra version and check PyPI for updates."""
+    import json
+    import urllib.request
+    from importlib.metadata import version as _pkg_version, PackageNotFoundError
+
+    try:
+        current = _pkg_version("ordra")
+    except PackageNotFoundError:
+        current = "dev"
+
+    console.print()
+    console.print(f"  [bold cyan]◈  ORDRA[/bold cyan]  [dim]version[/dim]  [bold white]{current}[/bold white]")
+
+    try:
+        url = "https://pypi.org/pypi/ordra/json"
+        with urllib.request.urlopen(url, timeout=3) as resp:  # noqa: S310
+            data = json.loads(resp.read())
+        latest = data["info"]["version"]
+        if latest != current:
+            console.print(f"  [yellow]Update available:[/yellow] {latest}  →  run [cyan]ordra update[/cyan]")
+        else:
+            console.print("  [green]You are on the latest version.[/green]")
+    except Exception:
+        console.print("  [dim](Could not reach PyPI to check for updates.)[/dim]")
+
+    console.print()
+
+
+@app.command()
+def update():
+    """Upgrade Ordra to the latest version from PyPI."""
+    import subprocess
+    import sys
+
+    console.print()
+    with console.status("[bold cyan]Checking for updates...[/bold cyan]"):
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--upgrade", "ordra"],
+            capture_output=True,
+            text=True,
+        )
+
+    if result.returncode == 0:
+        console.print("[bold green]Ordra updated successfully.[/bold green]")
+        console.print("[dim]Restart your terminal for changes to take effect.[/dim]")
+    else:
+        console.print("[red]Update failed.[/red]")
+        console.print(result.stderr.strip())
     console.print()
 
 
