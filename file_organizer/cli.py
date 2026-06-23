@@ -384,7 +384,7 @@ def chat(
     db = get_db()
 
     console.print()
-    console.print(Rule("[bold cyan][*] Ordra AI[/bold cyan]", style="dim cyan"))
+    console.print(Rule("[bold cyan]◈  Ordra AI[/bold cyan]", style="dim cyan"))
     console.print()
     console.print(f"[dim]You:[/dim] {question}")
     console.print()

@@ -321,7 +321,7 @@ def render_suggestions(suggestions: list[Suggestion], console: Console, ai_strea
 
     # AI Insights section
     if ai_stream is not None:
-        console.print(Rule("[bold cyan][*] AI Insights[/bold cyan]", style="dim cyan"))
+        console.print(Rule("[bold cyan]◈  AI Insights[/bold cyan]", style="dim cyan"))
         console.print()
         ai_text = Text()
         with Live(ai_text, console=console, refresh_per_second=12) as live:
