@@ -1,10 +1,13 @@
 import shutil
 import sqlite3
 import time
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
 from file_organizer.config import SORT_RULES, PROTECTED_PATH_SEGMENTS
+
+_PROTECTED_NFC = {unicodedata.normalize("NFC", p) for p in PROTECTED_PATH_SEGMENTS}
 
 
 @dataclass
@@ -100,8 +103,8 @@ def execute_sort_plan(
 
 def _is_protected(path: Path) -> bool:
     """Return True if any segment of the path matches a protected directory name."""
-    parts = {p.lower() for p in path.parts}
-    return bool(parts & PROTECTED_PATH_SEGMENTS)
+    parts = {unicodedata.normalize("NFC", p.lower()) for p in path.parts}
+    return bool(parts & _PROTECTED_NFC)
 
 
 def _resolve_collision(dest: Path, used: set[str]) -> Path:

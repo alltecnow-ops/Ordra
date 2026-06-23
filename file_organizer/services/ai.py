@@ -1,10 +1,18 @@
 import os
 import sqlite3
 import time
+import unicodedata
 from typing import Iterator
 
 from file_organizer.services.duplicates import get_space_summary, get_duplicate_groups
 from file_organizer.services.suggestions import Suggestion
+
+
+def _sanitize(text: str, max_len: int = 500) -> str:
+    """Strip control characters and cap length before embedding in prompts."""
+    cleaned = unicodedata.normalize("NFC", text)
+    cleaned = "".join(c for c in cleaned if c >= " " or c in "\n\t")
+    return cleaned[:max_len]
 
 
 def _fmt(b: int) -> str:
@@ -55,10 +63,10 @@ TOP DUPLICATE GROUPS:
 {chr(10).join(top_dupes) if top_dupes else '  None found'}
 
 LARGE FILES (top {len(large_files)}):
-{chr(10).join(f"  - {s.path} ({_fmt(s.potential_bytes)})" for s in large_files) if large_files else '  None found'}
+{chr(10).join(f"  - {_sanitize(s.path or '')} ({_fmt(s.potential_bytes)})" for s in large_files) if large_files else '  None found'}
 
 OLD FILES (not modified in 1+ year, top {len(old_files)}):
-{chr(10).join(f"  - {s.path}: {s.detail}" for s in old_files) if old_files else '  None found'}
+{chr(10).join(f"  - {_sanitize(s.path or '')}: {_sanitize(s.detail)}" for s in old_files) if old_files else '  None found'}
 
 JUNK FILES: {len(junk_files)} junk files ({_fmt(sum(s.potential_bytes for s in junk_files))})
 """.strip()
@@ -137,7 +145,7 @@ Sample of files (largest first):
                 "If asked about files you don't have data for, say so honestly."
             ),
             messages=[
-                {"role": "user", "content": f"File database context:\n{context}\n\nQuestion: {question}"}
+                {"role": "user", "content": f"File database context:\n{context}\n\nQuestion: {_sanitize(question, max_len=1000)}"}
             ],
         ) as stream:
             for text in stream.text_stream:

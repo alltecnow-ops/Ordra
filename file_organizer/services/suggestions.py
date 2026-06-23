@@ -38,11 +38,20 @@ def _folder_clause(folder_id: int | None) -> tuple[str, list]:
 
 
 def _large_files(conn, now, folder_id):
-    fc, fv = _folder_clause(folder_id)
-    rows = conn.execute(
-        f"SELECT id, path, size_bytes FROM files WHERE size_bytes >= ? AND is_junk = 0{fc} ORDER BY size_bytes DESC",
-        [LARGE_FILE_THRESHOLD] + fv,
-    ).fetchall()
+    if folder_id is not None:
+        rows = conn.execute(
+            "SELECT id, path, size_bytes FROM files"
+            " WHERE size_bytes >= ? AND is_junk = 0 AND folder_id = ?"
+            " ORDER BY size_bytes DESC",
+            (LARGE_FILE_THRESHOLD, folder_id),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT id, path, size_bytes FROM files"
+            " WHERE size_bytes >= ? AND is_junk = 0"
+            " ORDER BY size_bytes DESC",
+            (LARGE_FILE_THRESHOLD,),
+        ).fetchall()
     out = []
     for r in rows:
         detail = f"Large file: {_fmt(r['size_bytes'])}"
@@ -56,11 +65,20 @@ def _large_files(conn, now, folder_id):
 
 def _old_files(conn, now, folder_id):
     cutoff = now - OLD_FILE_DAYS * 86400
-    fc, fv = _folder_clause(folder_id)
-    rows = conn.execute(
-        f"SELECT id, path, size_bytes, mtime FROM files WHERE mtime < ? AND is_junk = 0{fc} ORDER BY mtime ASC LIMIT 100",
-        [cutoff] + fv,
-    ).fetchall()
+    if folder_id is not None:
+        rows = conn.execute(
+            "SELECT id, path, size_bytes, mtime FROM files"
+            " WHERE mtime < ? AND is_junk = 0 AND folder_id = ?"
+            " ORDER BY mtime ASC LIMIT 100",
+            (cutoff, folder_id),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT id, path, size_bytes, mtime FROM files"
+            " WHERE mtime < ? AND is_junk = 0"
+            " ORDER BY mtime ASC LIMIT 100",
+            (cutoff,),
+        ).fetchall()
     out = []
     for r in rows:
         days = int((now - r["mtime"]) / 86400)
@@ -74,11 +92,19 @@ def _old_files(conn, now, folder_id):
 
 
 def _junk_files(conn, now, folder_id):
-    fc, fv = _folder_clause(folder_id)
-    rows = conn.execute(
-        f"SELECT id, path, size_bytes, junk_reason FROM files WHERE is_junk = 1{fc} ORDER BY size_bytes DESC",
-        fv,
-    ).fetchall()
+    if folder_id is not None:
+        rows = conn.execute(
+            "SELECT id, path, size_bytes, junk_reason FROM files"
+            " WHERE is_junk = 1 AND folder_id = ?"
+            " ORDER BY size_bytes DESC",
+            (folder_id,),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT id, path, size_bytes, junk_reason FROM files"
+            " WHERE is_junk = 1"
+            " ORDER BY size_bytes DESC"
+        ).fetchall()
     out = []
     for r in rows:
         detail = f"Junk file ({r['junk_reason']})"
@@ -96,11 +122,16 @@ def _misplaced_files(conn, now, folder_id):
         for ext in exts:
             ext_to_cat[ext] = cat
 
-    fc, fv = _folder_clause(folder_id)
-    rows = conn.execute(
-        f"SELECT id, path, extension, size_bytes FROM files WHERE is_junk = 0{fc}",
-        fv,
-    ).fetchall()
+    if folder_id is not None:
+        rows = conn.execute(
+            "SELECT id, path, extension, size_bytes FROM files"
+            " WHERE is_junk = 0 AND folder_id = ?",
+            (folder_id,),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT id, path, extension, size_bytes FROM files WHERE is_junk = 0"
+        ).fetchall()
     out = []
     for r in rows:
         cat = ext_to_cat.get(r["extension"])

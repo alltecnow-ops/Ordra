@@ -1,6 +1,7 @@
 import re
 import sqlite3
 import time
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -8,11 +9,13 @@ from file_organizer.config import PROTECTED_PATH_SEGMENTS
 
 INSTALLER_EXTENSIONS = {".exe", ".msi", ".dmg", ".pkg", ".deb", ".rpm"}
 
+_PROTECTED_NFC = {unicodedata.normalize("NFC", p) for p in PROTECTED_PATH_SEGMENTS}
+
 
 def _is_protected(path: Path) -> bool:
     """Return True if any segment of the path matches a protected directory name."""
-    parts = {p.lower() for p in path.parts}
-    return bool(parts & PROTECTED_PATH_SEGMENTS)
+    parts = {unicodedata.normalize("NFC", p.lower()) for p in path.parts}
+    return bool(parts & _PROTECTED_NFC)
 OLD_DAYS = 180  # files not touched in 6 months
 
 # Pattern: filename (1).ext, filename (2).ext, filename-1.ext, filename_1.ext
